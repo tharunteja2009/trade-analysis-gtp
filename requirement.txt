@@ -1,0 +1,6 @@
+# Core AutoGen Framework
+autogen-agentchat
+autogen-core
+autogen-ext
+openai
+tiktoken
