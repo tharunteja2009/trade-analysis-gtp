@@ -5,3 +5,4 @@ autogen-ext
 openai
 tiktoken
 dotenv
+yfinance

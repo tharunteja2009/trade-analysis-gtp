@@ -1,6 +1,6 @@
 from autogen_agentchat.agents import AssistantAgent
 from ai.models import gtp_model_client
-from ai.tools.ticker_tool import ticker_tool
+from ai.tools.stock_information_tool import get_full_stock_info
 
 
 def get_trade_analyst_agent(strategy_name: str) -> AssistantAgent:
@@ -15,9 +15,9 @@ Instructions:
 1. Input:  
    - You will always be given a stock name (e.g., "TCS", "HDFC Bank", "Infosys").  
 
-2. Data Gathering (Use Tools):  
+2. Data Gathering :  
    Always attempt to fetch the following using available tools:  
-   - Real-time stock price & charts (NSE/BSE).  
+   - Real-time stock price & charts (NSE/BSE).
    - Technical indicators (moving averages, RSI, MACD, Bollinger bands, volume).  
    - Fundamentals (P/E, P/B, EPS, ROE, debt/equity, margins).  
    - Quarterly results & financial statements.  
@@ -51,6 +51,10 @@ Instructions:
    - State key regulatory/sentiment risks.  
    - End with final recommendation: BUY, SELL, or HOLD. 
    
+   Note : Use tool call to gather information for analysis
+   
+   IMPORTANT: After calling any tool, you MUST continue to provide the analysis and recommendation as specified in the Output Format above. Do not stop after just calling the tool.
         """,
+        tools=[get_full_stock_info],
     )
     return agent
