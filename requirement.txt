@@ -4,3 +4,4 @@ autogen-core
 autogen-ext
 openai
 tiktoken
+dotenv
