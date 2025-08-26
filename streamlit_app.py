@@ -12,6 +12,13 @@ import time
 import ast
 import re
 from utils.number_formatter import format_large_number, format_data_for_console
+from utils.cost_tracker import start_tracking, get_session_summary, format_cost_summary
+from utils.autogen_tracker import (
+    track_autogen_result,
+    get_team_summary,
+    format_team_summary,
+    parse_stock_data_for_tracking,
+)
 
 # Configure Streamlit page
 st.set_page_config(
@@ -113,9 +120,15 @@ with col2:
 # Function to run the analysis
 async def run_analysis(stock_symbol):
     """Run the stock analysis using the agent team"""
+    # Start cost tracking session
+    session_id = start_tracking(f"streamlit_analysis_{stock_symbol}")
+
     task = TextMessage(content=f"stock name : {stock_symbol}", source="user")
     team = trade_recommendation_team()
     result = await team.run(task=task)
+
+    # Track AutoGen team conversation
+    track_autogen_result(result)
 
     # Extract data from messages
     trade_final_analysis = None
@@ -138,7 +151,11 @@ async def run_analysis(stock_symbol):
         ):
             trade_data_collection = message.content
 
-    return trade_final_analysis, trade_data_collection
+    # Get cost summary for return
+    session_summary = get_session_summary()
+    team_summary = get_team_summary()
+
+    return trade_final_analysis, trade_data_collection, session_summary, team_summary
 
 
 # Function to safely parse data from string
@@ -301,10 +318,10 @@ if analyze_button and stock_name:
         st.error("Please enter a valid stock name or symbol")
     else:
         # Show loading message
-        with st.spinner(f"🔍 Analyzing {stock_name.upper()}..."):
+        with st.spinner(f"🔍 Analyzing {stock_name.upper()}... (tracking token usage)"):
             try:
                 # Run the analysis
-                final_analysis, stock_data = asyncio.run(
+                final_analysis, stock_data, session_summary, team_summary = asyncio.run(
                     run_analysis(stock_name.strip())
                 )
 
@@ -323,6 +340,69 @@ if analyze_button and stock_name:
                             unsafe_allow_html=True,
                         )
                         st.markdown(final_analysis)
+
+                    # Display cost and usage summary
+                    st.markdown("---")
+                    st.markdown(
+                        """
+                        <div style="
+                            background: linear-gradient(135deg, #ff7b7b 0%, #ff8e53 100%);
+                            color: white;
+                            padding: 1.5rem;
+                            border-radius: 1rem;
+                            margin: 1.5rem 0;
+                            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+                            text-align: center;
+                        ">
+                            <h2 style="margin: 0; font-family: 'Courier New', monospace;">
+                                💰 Token Usage & Cost Summary
+                            </h2>
+                        </div>
+                        """,
+                        unsafe_allow_html=True,
+                    )
+
+                    # Create two columns for session and team summaries
+                    col1, col2 = st.columns(2)
+
+                    with col1:
+                        st.markdown("#### 🔢 Session Overview")
+                        if session_summary and session_summary.strip():
+                            st.code(session_summary, language=None)
+                        else:
+                            st.info(
+                                "📝 Exact token usage data not available\n(AutoGen doesn't expose token counts)"
+                            )
+
+                    with col2:
+                        st.markdown("#### 🤖 Team Activity")
+                        if (
+                            team_summary
+                            and team_summary.get("total_estimated_tokens", 0) > 0
+                        ):
+                            st.code(format_team_summary(team_summary), language=None)
+                        else:
+                            st.info("No team conversation data tracked")
+
+                    # Cost estimation note
+                    st.info(
+                        "💡 **Note:** Token estimates are based on text length analysis. "
+                        "Actual costs may vary based on the specific model's tokenization."
+                    )
+
+                    # Parse stock data for detailed tracking
+                    if stock_data:
+                        data_sections = parse_stock_data_for_tracking(stock_data)
+                        if data_sections:
+                            st.markdown("#### 📊 Data Processing Breakdown")
+                            section_cols = st.columns(len(data_sections))
+                            for i, (section, tokens) in enumerate(
+                                data_sections.items()
+                            ):
+                                section_cols[i].metric(
+                                    label=section.replace("_", " ").title(),
+                                    value=f"{tokens:,} tokens",
+                                )
                 else:
                     st.error("No analysis results received. Please try again.")
 
