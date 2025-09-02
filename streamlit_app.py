@@ -238,9 +238,7 @@ def display_console_format_data(data):
         text-align: center;
     ">
         <h2 style="margin: 0; font-family: 'Courier New', monospace;">
-            ============================================================<br>
-            📈 DATA CONSIDERED FOR STOCK ANALYSIS<br>
-            ============================================================
+            📈 DATA CONSIDERED FOR STOCK ANALYSIS
         </h2>
     </div>
     """,
